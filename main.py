@@ -4,6 +4,7 @@ from os import path
 from settings import *
 from sprites import *
 from tilemap import *
+from random import randint
 
 
 class Game:
@@ -21,11 +22,16 @@ class Game:
         self.map_img = self.map.make_map()
         self.map_rect = self.map_img.get_rect()
         self.player_img = pg.image.load(path.join(img_folder, PLAYER_IMG)).convert_alpha()
+        self.treasure_img = pg.image.load(path.join(img_folder, TREASURE_IMG)).convert_alpha()
+        self.bullet_img = pg.image.load(path.join(img_folder, BULLET_IMG)).convert_alpha()
+        self.zombie_img = pg.image.load(path.join(img_folder, ZOMBIE_IMG)).convert_alpha()
 
     def new(self):
         self.win = True
         self.treasures = pg.sprite.Group()
         self.walls = pg.sprite.Group()
+        self.bullets = pg.sprite.Group()
+        self.zombies = pg.sprite.Group()
 
         for tile_object in self.map.tmxdata.objects:
             if tile_object.name == 'player':
@@ -34,21 +40,21 @@ class Game:
                 Wall(self, tile_object.x, tile_object.y,
                          tile_object.width, tile_object.height)
             if tile_object.name == 'treasure':
-                Treasure(self, tile_object.x, tile_object.y,
-                         tile_object.width, tile_object.height)
+                x, y = randint(30,1570), randint(30,1570)
+                self.treasure = Treasure(self, x, y, tile_object.width, tile_object.height)
+            if tile_object.name == 'zombie':
+                Zombie(self, tile_object.x, tile_object.y)
         self.camera = Camera(self.map.width, self.map.height)
 
     def run(self):
         self.playing = True
         start_ticks = pg.time.get_ticks()
         while self.playing:
-
             seconds=(pg.time.get_ticks()-start_ticks) / 1000 
             time_left = GAMETIME - seconds
             if time_left <= 0:
                 self.win = False
                 break
-
             self.dt = self.clock.tick(FPS) / 1000.0  
             self.events()
             self.update()
@@ -59,12 +65,24 @@ class Game:
         sys.exit()
 
     def update(self):
+        self.treasure.update()
         self.player.update()
+        for bullet in self.bullets:
+            bullet.update()
+        for zombie in self.zombies:
+            zombie.update()
         self.camera.update(self.player)
 
     def draw(self, time_left):
         self.screen.blit(self.map_img, self.camera.apply_rect(self.map_rect))
+        self.player.draw_health()
         self.screen.blit(self.player.image, self.camera.apply(self.player))
+        self.screen.blit(self.treasure.image, self.camera.apply(self.treasure))
+        for bullet in self.bullets:
+            self.screen.blit(bullet.image, self.camera.apply(bullet))
+        for zombie in self.zombies:
+            zombie.draw_health()
+            self.screen.blit(zombie.image, self.camera.apply(zombie))
 
         pg.font.init()
         myfont = pg.font.SysFont('Comic Sans MS', 50)
@@ -108,8 +126,8 @@ if __name__ == '__main__':
     while True:
         g.new()
         pg.mixer.music.load('music/faded.mp3')
-        pg.mixer.music.play(0)
+        #pg.mixer.music.play(0)
         g.run()
-        pg.mixer.music.stop()
+        #pg.mixer.music.stop()
         g.gg()
         
